@@ -126,7 +126,7 @@ class Trie:
                 depth += 1
                 temp = temp.children[c]
 
-            return depth
+            return depth if temp.is_end_of_word else -1
         else:
             temp = self.root
             depth = 0
