@@ -28,6 +28,7 @@ class Trie:
                 temp.children[c] = TrieNode(c)
 
             temp = temp.children[c]
+        temp.is_end_of_word = True
     
     def put_compressed(self, key):
         node = self.root
