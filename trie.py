@@ -1,0 +1,144 @@
+# explanations for member functions are provided in requirements.py
+# each file that uses a skip list should import it from this file.
+
+from typing import List
+
+
+
+class TrieNode:
+
+    def __init__(self, value):
+        self.value = value
+        self.children = {}
+        self.is_end_of_word = False
+
+
+class Trie:
+     
+    def __init__(self, is_compressed: bool):
+        self.is_compressed = is_compressed
+        self.root = TrieNode("/")
+        pass
+
+
+    def put_uncompressed(self, key):
+        temp = self.root
+        for c in key:
+            if c not in temp.children:
+                temp.children[c] = TrieNode(c)
+
+            temp = temp.children[c]
+    
+    def put_compressed(self, key):
+        node = self.root
+        index = 0
+
+        while index < len(key):
+            match = False
+            for child in node.children.values():
+                lcp, lcp_length = self._find_longest_common_prefix(child.value, key[index:])
+                if lcp_length > 0:  # If there's a match
+                    match = True
+                    if lcp_length < len(child.value):
+                        # Need to split the child node
+                        child = self._split_child(node, child, lcp, lcp_length)
+                    index += lcp_length
+                    node = child
+                    break
+            if not match:
+                new_node = TrieNode(key[index:])
+                node.children[key[index:]] = new_node
+                node = new_node
+                break
+        node.is_end_of_word = True
+
+    
+    def _find_longest_common_prefix(self, child_value, key_prefix):
+        lcp = ""
+        lcp_length = 0
+
+        for i in range(min(len(child_value), len(key_prefix))):
+            if child_value[i] == key_prefix[i]:
+                lcp += child_value[i]
+                lcp_length += 1
+            else:
+                break
+
+        return lcp, lcp_length
+
+
+    def _split_child(self, node, child, lcp, lcp_length):
+        split1 = lcp
+        split2 = child.value[lcp_length:]
+
+        node.children[split1] = TrieNode(split1)
+        node.children[split1].children[split2] = TrieNode(split2)
+        node.children[split1].children[split2].is_end_of_word = True
+
+        for child_node in child.children.values():
+            node.children[split1].children[split2].children[child_node.value] = child_node
+
+        del node.children[child.value]
+        
+        return node.children[split1]
+
+
+    def construct_trie_from_text(self, keys: List[str]) -> None:
+        for key in keys:
+            if not self.is_compressed:    
+                self.put_uncompressed(key)
+            else:
+                self.put_compressed(key)
+
+
+    def get_suffixes(self, word):
+        suffixes = []
+        for i in range(len(word)):
+            suffixes.append(word[i:])
+        return suffixes
+
+
+    def construct_suffix_tree_from_text(self, keys: List[str]) -> None:
+        suffixes = []
+
+        for key in keys:
+            for suffix in self.get_suffixes(key):
+                suffixes.append(suffix)
+
+        for suffix in suffixes:
+            if not self.is_compressed:    
+                self.put_uncompressed(suffix)
+            else:
+                self.put_compressed(suffix)
+
+        return self
+    
+    def search_and_get_depth(self, key: str) -> int:
+        if not self.is_compressed:
+            temp = self.root
+            depth = 0
+
+            for c in key:
+                if c not in temp.children:
+                    return -1
+
+                depth += 1
+                temp = temp.children[c]
+
+            return depth
+        else:
+            temp = self.root
+            depth = 0
+            i = 0
+            while i < len(key):
+                found = False
+                for child in temp.children.values():
+                    if key.startswith(child.value, i):
+                        depth += 1
+                        i += len(child.value)
+                        temp = child
+                        found = True
+                        break
+                if not found:
+                    return -1
+            return depth if temp.is_end_of_word else -1
